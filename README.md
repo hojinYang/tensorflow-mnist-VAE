@@ -12,7 +12,7 @@ An implementation of variational auto-encoder (VAE) for MNIST descripbed in the 
 --KL_beta : beta weight of KL loss term(default = 1.0)
 ```
 ### latent space VAE vs AE
-VAE는 latent space가 정규분포로 맞추어지지만, AE는 실행할 때마다 다른 분포의 manifold를 학습한다. 
+VAE는 latent space가 정규분포로 맞추어지지만, AE는 실행할 때마다 다양한 분포의 manifold를 얻는다. 
 ```
 python run_main.py --dim_z <each value> --vanilla_ae_mode
 ``` 
@@ -51,7 +51,7 @@ python run_main.py --dim_z <each value> --no_encoder_mode
 
 
 ### Effect of KL-loss term
-KL loss term의 가중치(beta)를 줄이면 줄일수록 manifold가 정규분포를 벗어난다. 즉 manifold학습보다는 reconstruction에 더욱 가중치를 두는 모델이 된다. 
+KL loss term의 가중치(beta)를 줄이면 줄일수록 manifold가 정규분포를 벗어난다. 즉 정규분포를 따르는 manifold를 만들기 보다는 reconstruction에 더욱 가중치를 두는 모델이 된다. 
 ```
 python run_main.py --dim_z <each value> --KL_beta 0.1
 ``` 

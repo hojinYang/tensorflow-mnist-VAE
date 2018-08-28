@@ -37,8 +37,7 @@ def gaussian_MLP_encoder(x, n_hidden, n_output, keep_prob, is_vae):
         else:
             wo = tf.get_variable('wo', [h1.get_shape()[1], n_output], initializer=w_init)
             bo = tf.get_variable('bo', [n_output], initializer=b_init)
-            gaussian_params = tf.matmul(h1, wo) + bo
-            mean = gaussian_params
+            mean = tf.matmul(h1, wo) + bo
             stddev = 0
 
     return mean, stddev
@@ -85,7 +84,6 @@ def autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob, is_vae, is_encode
         z = mu
 
     if not is_encoder:
-        print("pass1")
         z = tf.random_normal(tf.shape(mu), 0, 1, dtype=tf.float32)
 
 
@@ -104,7 +102,6 @@ def autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob, is_vae, is_encode
         ELBO = marginal_likelihood - beta * KL_divergence
 
     loss = -ELBO
-    print(KL_divergence)
 
     return y, z, loss, -marginal_likelihood, KL_divergence
 
