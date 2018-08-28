@@ -1,7 +1,8 @@
 import tensorflow as tf
 
+
 # Gaussian MLP as encoder
-def gaussian_MLP_encoder(x, n_hidden, n_output, keep_prob):
+def gaussian_MLP_encoder(x, n_hidden, n_output, keep_prob, is_vae):
     with tf.variable_scope("gaussian_MLP_encoder"):
         # initializers
         w_init = tf.contrib.layers.variance_scaling_initializer()
@@ -23,15 +24,22 @@ def gaussian_MLP_encoder(x, n_hidden, n_output, keep_prob):
 
         # output layer
         # borrowed from https: // github.com / altosaar / vae / blob / master / vae.py
-        wo = tf.get_variable('wo', [h1.get_shape()[1], n_output * 2], initializer=w_init)
-        bo = tf.get_variable('bo', [n_output * 2], initializer=b_init)
-        gaussian_params = tf.matmul(h1, wo) + bo
+        if is_vae:
+            wo = tf.get_variable('wo', [h1.get_shape()[1], n_output * 2], initializer=w_init)
+            bo = tf.get_variable('bo', [n_output * 2], initializer=b_init)
+            gaussian_params = tf.matmul(h1, wo) + bo
 
-        # The mean parameter is unconstrained
-        mean = gaussian_params[:, :n_output]
-        # The standard deviation must be positive. Parametrize with a softplus and
-        # add a small epsilon for numerical stability
-        stddev = 1e-6 + tf.nn.softplus(gaussian_params[:, n_output:])
+            # The mean parameter is unconstrained
+            mean = gaussian_params[:, :n_output]
+            # The standard deviation must be positive. Parametrize with a softplus and
+            # add a small epsilon for numerical stability
+            stddev = 1e-6 + tf.nn.softplus(gaussian_params[:, n_output:])
+        else:
+            wo = tf.get_variable('wo', [h1.get_shape()[1], n_output], initializer=w_init)
+            bo = tf.get_variable('bo', [n_output], initializer=b_init)
+            gaussian_params = tf.matmul(h1, wo) + bo
+            mean = gaussian_params
+            stddev = 0
 
     return mean, stddev
 
@@ -64,29 +72,39 @@ def bernoulli_MLP_decoder(z, n_hidden, n_output, keep_prob, reuse=False):
 
     return y
 
+
 # Gateway
-def autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob):
+def autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob, is_vae, is_encoder, beta):
 
     # encoding
-    mu, sigma = gaussian_MLP_encoder(x_hat, n_hidden, dim_z, keep_prob)
-
+    mu, sigma = gaussian_MLP_encoder(x_hat, n_hidden, dim_z, keep_prob, is_vae)
     # sampling by re-parameterization technique
-    z = mu + sigma * tf.random_normal(tf.shape(mu), 0, 1, dtype=tf.float32)
+    if is_vae:
+        z = mu + sigma * tf.random_normal(tf.shape(mu), 0, 1, dtype=tf.float32)
+    else:
+        z = mu
+
+    if not is_encoder:
+        print("pass1")
+        z = tf.random_normal(tf.shape(mu), 0, 1, dtype=tf.float32)
+
 
     # decoding
     y = bernoulli_MLP_decoder(z, n_hidden, dim_img, keep_prob)
     y = tf.clip_by_value(y, 1e-8, 1 - 1e-8)
 
     # loss
-    marginal_likelihood = tf.reduce_sum(x * tf.log(y) + (1 - x) * tf.log(1 - y), 1)
-    KL_divergence = 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(1e-8 + tf.square(sigma)) - 1, 1)
-
+    marginal_likelihood = tf.reduce_sum(x * tf.log(y+1e-10) + (1 - x) * tf.log(1 - y), 1)
     marginal_likelihood = tf.reduce_mean(marginal_likelihood)
-    KL_divergence = tf.reduce_mean(KL_divergence)
-
-    ELBO = marginal_likelihood - KL_divergence
+    ELBO = marginal_likelihood
+    KL_divergence = tf.constant(0.0)
+    if is_vae:
+        KL_divergence = 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(1e-8 + tf.square(sigma)) - 1, 1)
+        KL_divergence = tf.reduce_mean(KL_divergence)
+        ELBO = marginal_likelihood - beta * KL_divergence
 
     loss = -ELBO
+    print(KL_divergence)
 
     return y, z, loss, -marginal_likelihood, KL_divergence
 

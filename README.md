@@ -1,7 +1,73 @@
 # Variational Auto-Encoder for MNIST
 An implementation of variational auto-encoder (VAE) for MNIST descripbed in the paper:  
 * [Auto-Encoding Variational Bayes](https://arxiv.org/pdf/1312.6114) by Kingma et al.
+## Modification
+- Vanilla Autoencoder와 비교해가며 실험할 수 있도록 구현.
+- Encoder 없이 Normal Dist에서 바로 Decoder로 가는 모델을 실험할 수 있도록 argument를 추가. 
+- KL loss term의 weight를 argument로 변형할 수 있도록 수정.  
 
+```
+--vanilla_ae_mode : vanilla autoencoder mode if specified
+--no_encoder_mode : no encoder mode if specified
+--KL_beta : beta weight of KL loss term(default = 1.0)
+```
+### latent space VAE vs AE
+VAE는 latent space가 정규분포로 맞추어지지만, AE는 실행할 때마다 다른 분포의 manifold를 학습한다. 
+```
+python run_main.py --dim_z <each value> --vanilla_ae_mode
+``` 
+<table align='center'>
+<tr align='center'>
+<td> VAE </td>
+<td> VAE </td>
+<td> AE </td>
+<td> AE </td>
+<td> AE </td>
+</tr>
+<tr>
+<td><img src = 'results/vae1.jpg' height = '150px'>
+<td><img src = 'results/vae2.jpg' height = '150px'>
+<td><img src = 'results/ae1.jpg' height = '150px'>
+<td><img src = 'results/ae2.jpg' height = '150px'>
+<td><img src = 'results/ae3.jpg' height = '150px'>
+</tr>
+</table>
+
+### Naiive approach of VAE
+Encoder 없이 VAE를 학습할 경우, latent space는 정규분포를 따르지만 generation 결과가 좋지 못하다. 
+```
+python run_main.py --dim_z <each value> --no_encoder_mode
+``` 
+<table align='center'>
+<tr align='center'>
+<td> MNIST manifold (normal dist) </td>
+<td> Generation results  </td>
+</tr>
+<tr>
+<td><img src = 'results/no_encoder.jpg' height = '400px'>
+<td><img src = 'results/no_encoder2.jpg' height = '400px'>
+</tr>
+</table>
+
+
+### Effect of KL-loss term
+KL loss term의 가중치(beta)를 줄이면 줄일수록 manifold가 정규분포를 벗어난다. 즉 manifold학습보다는 reconstruction에 더욱 가중치를 두는 모델이 된다. 
+```
+python run_main.py --dim_z <each value> --KL_beta 0.1
+``` 
+<table align='center'>
+<tr align='center'>
+<td> beta=0.3 </td>
+<td> beta=0.1 </td>
+<td> beta=0.01 </td>
+</tr>
+<tr>
+<td><img src = 'results/beta_03.jpg' height = '325px'>
+<td><img src = 'results/beta_01.jpg' height = '325px'>
+<td><img src = 'results/beta_001.jpg' height = '325px'>
+</tr>
+</table>
+ 
 ## Results
 ### Reproduce
 Well trained VAE must be able to reproduce input image.  
@@ -107,3 +173,6 @@ The implementation is based on the projects:
 
 ## Acknowledgements
 This implementation has been tested with Tensorflow r0.12 on Windows 10.
+
+## modified
+add 'is_vae' and 'is_encoder' mode to check 

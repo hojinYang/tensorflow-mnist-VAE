@@ -60,6 +60,15 @@ def parse_args():
     parser.add_argument('--PMLR_n_samples', type=int, default=5000,
                         help='Number of samples in order to get distribution of labeled data')
 
+    parser.add_argument('--vanilla_ae_mode', action='store_true', default=False,
+                        help='vanilla autoencoder mode if specified')
+
+    parser.add_argument('--no_encoder_mode', action='store_true', default=False,
+                        help='no encoder mode if specified')
+
+    parser.add_argument('--KL_beta', type=float, default=1.0,
+                       help= 'beta weight of KL loss term')
+
     return check_args(parser.parse_args())
 
 """checking arguments"""
@@ -203,6 +212,15 @@ def main(args):
     PMLR_z_range = args.PMLR_z_range            # range for random latent vector
     PMLR_n_samples = args.PMLR_n_samples        # number of labeled samples to plot a map from input data space to the latent space
 
+    #vae or not
+    is_vae = (args.vanilla_ae_mode == False)
+    is_encoder = (args.no_encoder_mode == False)
+
+    #KL-beta
+    beta = args.KL_beta
+
+    print(is_vae)
+    print(is_encoder)
     """ prepare MNIST data """
 
     train_total_data, train_size, _, _, test_data, test_labels = mnist_data.prepare_MNIST_data()
@@ -222,8 +240,10 @@ def main(args):
     z_in = tf.placeholder(tf.float32, shape=[None, dim_z], name='latent_variable')
 
     # network architecture
-    y, z, loss, neg_marginal_likelihood, KL_divergence = vae.autoencoder(x_hat, x, dim_img, dim_z, n_hidden, keep_prob)
+    y, z, loss, neg_marginal_likelihood, KL_divergence = vae.autoencoder(x_hat, x, dim_img, dim_z,
+                                                                         n_hidden, keep_prob, is_vae, is_encoder, beta)
 
+    print(KL_divergence)
     # optimization
     train_op = tf.train.AdamOptimizer(learn_rate).minimize(loss)
 
